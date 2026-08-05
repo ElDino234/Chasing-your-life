@@ -1,2 +1,3 @@
 # Chasing-your-life
-A game im working in
+RPG/Supervivencia.
+Va a tardar tiempo, es un proyecto que hago por placer, no lo tomo muy en serio.

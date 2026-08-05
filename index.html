@@ -1,0 +1,50 @@
+<!DOCTYPE html>
+<html lang="es">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>Chasing Your Life</title>
+  <link rel="stylesheet" href="style.css">
+</head>
+<body>
+  <div class="container">
+    <header>
+      <h1>Chasing Your Life</h1>
+      <p>RPG de supervivencia 2D con combate por turnos y recolección de materiales.</p>
+    </header>
+    <main>
+      <canvas id="gameCanvas" width="512" height="512"></canvas>
+      <aside class="ui">
+        <section>
+          <h2>Controles</h2>
+          <p>WASD para moverte</p>
+          <p>E para recoger / interactuar</p>
+          <p>R para reiniciar si mueres</p>
+        </section>
+        <section>
+          <h2>Estado</h2>
+          <p id="statusText">Explorando...</p>
+          <p>Vida: <span id="playerHealth">100</span></p>
+          <p>Madera: <span id="woodCount">0</span></p>
+          <p>Piedra: <span id="stoneCount">0</span></p>
+          <p>Curaciones: <span id="potionsCount">2</span></p>
+          <p>Enemigo: <span id="enemyInfo">-</span></p>
+        </section>
+        <section id="combatControls" class="hidden">
+          <h2>Combate</h2>
+          <button id="attackButton">Atacar</button>
+          <button id="healButton">Usar curación</button>
+        </section>
+        <section>
+          <h2>Mensaje</h2>
+          <div id="messageBox">Mueve al héroe, recoge materiales y prepárate para el combate.</div>
+        </section>
+      </aside>
+    </main>
+    <footer>
+      <p>Abre este archivo en el navegador para jugar.</p>
+    </footer>
+  </div>
+  <script src="script.js"></script>
+</body>
+</html>
