@@ -85,6 +85,51 @@ button:disabled {
   display: none;
 }
 
+.overlay {
+  position: fixed;
+  inset: 0;
+  display: grid;
+  place-items: center;
+  background: rgba(0, 0, 0, 0.85);
+  z-index: 10;
+}
+
+.start-card {
+  width: min(520px, calc(100% - 32px));
+  padding: 28px;
+  border-radius: 18px;
+  background: rgba(15, 33, 22, 0.98);
+  border: 1px solid rgba(255, 255, 255, 0.08);
+  text-align: center;
+}
+
+.start-card h1 {
+  margin-bottom: 14px;
+}
+
+.intro-text {
+  white-space: pre-wrap;
+  text-align: left;
+  margin: 0 auto 18px;
+  line-height: 1.5;
+  max-height: 260px;
+  overflow-y: auto;
+}
+
+.chapter-title,
+.objective-text {
+  margin: 8px 0 0;
+  font-weight: 600;
+}
+
+.chapter-title {
+  color: #f5d56d;
+}
+
+.objective-text {
+  color: #b1db9a;
+}
+
 #messageBox {
   min-height: 120px;
   white-space: pre-wrap;

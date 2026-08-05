@@ -7,10 +7,21 @@
   <link rel="stylesheet" href="style.css">
 </head>
 <body>
+  <div class="overlay" id="startScreen">
+    <div class="start-card">
+      <h1>Chasing Your Life</h1>
+      <p class="intro-text">Prólogo – El fin del mundo
+
+El mundo terminó en un instante. Un héroe y cinco compañeros lucharon en la última batalla; él se sacrificó y todos creyeron que estaba muerto.</p>
+      <button id="startButton">Iniciar juego</button>
+    </div>
+  </div>
   <div class="container">
     <header>
       <h1>Chasing Your Life</h1>
       <p>RPG de supervivencia 2D con combate por turnos y recolección de materiales.</p>
+      <p id="chapterTitle" class="chapter-title">Capítulo: Prólogo</p>
+      <p id="objectiveText" class="objective-text">Objetivo: Sobrevive y descubre qué pasó.</p>
     </header>
     <main>
       <canvas id="gameCanvas" width="512" height="512"></canvas>

@@ -10,6 +10,43 @@ const enemyInfoLabel = document.getElementById('enemyInfo');
 const combatControls = document.getElementById('combatControls');
 const attackButton = document.getElementById('attackButton');
 const healButton = document.getElementById('healButton');
+const startScreen = document.getElementById('startScreen');
+const startButton = document.getElementById('startButton');
+const chapterTitleLabel = document.getElementById('chapterTitle');
+const objectiveTextLabel = document.getElementById('objectiveText');
+
+const chapters = [
+  {
+    title: 'Prólogo – El fin del mundo',
+    objective: 'Sobrevive, recolecta recursos y prepárate para el combate.',
+    intro: 'El mundo terminó en un instante. Un héroe y cinco compañeros lucharon en la última batalla; él se sacrificó y todos creyeron que estaba muerto.'
+  },
+  {
+    title: 'Capítulo 1 – La última batalla',
+    objective: 'Derrota al enemigo y sigue explorando.',
+    intro: 'El sacrificio fue total. Parece que todo terminó, pero existe una segunda oportunidad para seguir adelante.'
+  }
+];
+
+let currentChapter = 0;
+let gameMode = 'menu';
+
+function applyChapter() {
+  const chapter = chapters[currentChapter];
+  chapterTitleLabel.textContent = chapter.title;
+  objectiveTextLabel.textContent = `Objetivo: ${chapter.objective}`;
+  setMessage(chapter.intro);
+}
+
+function startGame() {
+  startScreen.classList.add('hidden');
+  gameMode = 'play';
+  state = 'explore';
+  currentChapter = 0;
+  applyChapter();
+  updateUI();
+  draw();
+}
 
 const tileSize = 32;
 const cols = 16;
@@ -116,6 +153,14 @@ function updateUI() {
   healButton.disabled = state !== 'combat' || player.potions <= 0;
 }
 
+function nextChapter() {
+  if (currentChapter < chapters.length - 1) {
+    currentChapter += 1;
+    applyChapter();
+    draw();
+  }
+}
+
 function movePlayer(dx, dy) {
   if (state !== 'explore') return;
   const newX = player.x + dx;
@@ -135,7 +180,12 @@ function movePlayer(dx, dy) {
   }
 
   if (target.char === 'G') {
-    setMessage('¡Has encontrado un lugar seguro! Sigue explorando o recolecta recursos para mejorar tus chances.');
+    if (currentChapter < chapters.length - 1) {
+      setMessage('¡Has encontrado un lugar seguro! Prepárate para el próximo capítulo.');
+      nextChapter();
+    } else {
+      setMessage('¡Has encontrado un lugar seguro! Has avanzado lo suficiente por ahora.');
+    }
   } else if (target.gatherable) {
     setMessage(`Hay un recurso aquí. Presiona E para recolectar ${target.gatherable}.`);
   } else {
@@ -237,6 +287,8 @@ function restartGame() {
   state = 'explore';
   enemy = null;
   setMessage('Juego reiniciado. Sigue explorando y recolectando recursos.');
+  currentChapter = 0;
+  applyChapter();
   updateUI();
   draw();
 }
@@ -246,6 +298,7 @@ function getRandomInt(min, max) {
 }
 
 document.addEventListener('keydown', (event) => {
+  if (gameMode !== 'play') return;
   if (state === 'dead' && event.key.toLowerCase() === 'r') {
     restartGame();
     return;
@@ -260,6 +313,8 @@ document.addEventListener('keydown', (event) => {
   }
   draw();
 });
+
+startButton.addEventListener('click', startGame);
 
 attackButton.addEventListener('click', () => {
   fightAction('attack');
