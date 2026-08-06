@@ -11,6 +11,11 @@ const fightButton = document.getElementById('fightButton');
 const inventoryButton = document.getElementById('inventoryButton');
 const infoButton = document.getElementById('infoButton');
 const runButton = document.getElementById('runButton');
+const openInventoryButton = document.getElementById('openInventoryButton');
+const inventoryPanel = document.getElementById('inventoryPanel');
+const closeInventoryButton = document.getElementById('closeInventoryButton');
+const inventoryGrid = document.getElementById('inventoryGrid');
+const selectedSlotLabel = document.getElementById('selectedSlotLabel');
 const startScreen = document.getElementById('startScreen');
 const startButton = document.getElementById('startButton');
 const chapterTitleLabel = document.getElementById('chapterTitle');
@@ -281,10 +286,10 @@ function updateUI() {
   stoneCountLabel.textContent = player.stone;
   potionsCountLabel.textContent = player.potions;
   statusText.textContent = state === 'combat' ? 'Combate activo' : state === 'dead' ? 'Has muerto. Presiona R para reiniciar.' : 'Explorando';
-  combatMenuOverlay.classList.toggle('hidden', state !== 'combat');
+  combatMenuOverlay.classList.toggle('hidden', state === 'menu');
   document.body.classList.toggle('combat-active', state === 'combat');
   fightButton.disabled = state !== 'combat';
-  inventoryButton.disabled = state !== 'combat';
+  inventoryButton.disabled = false;
   infoButton.disabled = state !== 'combat';
   runButton.disabled = state !== 'combat';
 }
@@ -548,6 +553,10 @@ function getRandomInt(min, max) {
 
 document.addEventListener('keydown', (event) => {
   if (gameMode !== 'play') return;
+  if (event.key === 'Tab') {
+    event.preventDefault();
+    return;
+  }
   if (state === 'dead' && event.key.toLowerCase() === 'r') {
     restartGame();
     return;
@@ -571,19 +580,58 @@ fightButton.addEventListener('click', () => {
 });
 
 inventoryButton.addEventListener('click', () => {
-  showInventory();
+  openInventoryPanel();
+});
+openInventoryButton.addEventListener('click', () => {
+  openInventoryPanel();
+});
+closeInventoryButton.addEventListener('click', () => {
+  closeInventoryPanel();
 });
 
-function showInventory() {
-  if (state === 'combat') {
-    const pIvs = player.iv ? `IVs — HP: ${player.iv.hp}  ATK: ${player.iv.atk}  DEF: ${player.iv.def}  SPD: ${player.iv.spd}` : 'IVs — N/A';
-    const pStats = `Jugador (Lv ${player.level}) — HP ${player.health}/${player.maxHealth}  ATK ${player.attack}  DEF ${player.defense}  SPD ${player.speed}`;
-    const status = player.statusEffects && player.statusEffects.length ? `Estado: ${player.statusEffects.join(', ')}` : 'Estado: Ninguno';
-    const quality = `Calidad: ${player.quality || 'Normal'}`;
-    setMessage(pIvs + '\n' + pStats + '\n' + status + '  ' + quality);
-    return;
-  }
-  setMessage(`Inventario: ${player.wood} madera, ${player.stone} piedra, ${player.potions} pociones.`);
+const inventorySlots = Array(32).fill(null);
+let selectedInventorySlot = null;
+
+function openInventoryPanel() {
+  selectedInventorySlot = null;
+  selectedSlotLabel.textContent = 'Slot seleccionado: ninguno';
+  syncInventorySlots();
+  renderInventoryGrid();
+  inventoryPanel.classList.remove('hidden');
+  inventoryPanel.style.display = 'grid';
+}
+
+function closeInventoryPanel() {
+  inventoryPanel.classList.add('hidden');
+  inventoryPanel.style.display = 'none';
+}
+
+function syncInventorySlots() {
+  inventorySlots.fill(null);
+  if (player.wood > 0) inventorySlots[0] = { name: 'Madera', count: player.wood };
+  if (player.stone > 0) inventorySlots[1] = { name: 'Piedra', count: player.stone };
+  if (player.potions > 0) inventorySlots[2] = { name: 'Poción', count: player.potions };
+}
+
+function renderInventoryGrid() {
+  inventoryGrid.innerHTML = '';
+  inventorySlots.forEach((item, index) => {
+    const slot = document.createElement('div');
+    slot.className = 'inventory-slot' + (selectedInventorySlot === index ? ' selected' : '');
+    slot.addEventListener('click', () => selectInventorySlot(index));
+    if (item) {
+      slot.innerHTML = `<span>${item.name}</span><span>${item.count}</span>`;
+    } else {
+      slot.innerHTML = `<span>Vacío</span>`;
+    }
+    inventoryGrid.appendChild(slot);
+  });
+}
+
+function selectInventorySlot(index) {
+  selectedInventorySlot = index;
+  selectedSlotLabel.textContent = `Slot seleccionado: ${index + 1}`;
+  renderInventoryGrid();
 }
 
 infoButton.addEventListener('click', () => {

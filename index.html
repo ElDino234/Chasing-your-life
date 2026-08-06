@@ -27,8 +27,6 @@ El mundo terminó en un instante. Un héroe y cinco compañeros lucharon en la �
       <div class="canvas-container">
         <canvas id="gameCanvas" width="920" height="520"></canvas>
       </div>
-      
-      </div>
       <div id="combatMenuOverlay" class="combat-menu-overlay hidden">
         <div class="battle-options">
           <button id="fightButton">Luchar</button>
@@ -54,6 +52,7 @@ El mundo terminó en un instante. Un héroe y cinco compañeros lucharon en la �
           <p>Madera: <span id="woodCount">0</span></p>
           <p>Piedra: <span id="stoneCount">0</span></p>
           <p>Curaciones: <span id="potionsCount">2</span></p>
+          <button id="openInventoryButton">Abrir inventario</button>
         </section>
         <section>
           <h2>Mensaje</h2>
@@ -61,6 +60,18 @@ El mundo terminó en un instante. Un héroe y cinco compañeros lucharon en la �
         </section>
       </aside>
     </main>
+    <div id="inventoryPanel" class="inventory-panel hidden" style="display:none;">
+      <div class="inventory-backdrop"></div>
+      <div class="inventory-window">
+        <div class="inventory-header">
+          <h2>Inventario</h2>
+          <button id="closeInventoryButton" class="small-button">Cerrar</button>
+        </div>
+        <p class="inventory-help">Selecciona una casilla para elegir dónde poner los objetos.</p>
+        <p id="selectedSlotLabel">Slot seleccionado: ninguno</p>
+        <div id="inventoryGrid" class="inventory-grid"></div>
+      </div>
+    </div>
     <footer>
       <p>Abre este archivo en el navegador para jugar.</p>
     </footer>
