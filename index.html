@@ -28,11 +28,53 @@ El mundo terminó en un instante. Un héroe y cinco compañeros lucharon en la �
         <canvas id="gameCanvas" width="920" height="520"></canvas>
       </div>
       <div id="combatMenuOverlay" class="combat-menu-overlay hidden">
-        <div class="battle-options">
-          <button id="fightButton">Luchar</button>
-          <button id="inventoryButton">Inventario</button>
-          <button id="infoButton">Info</button>
-          <button id="runButton">Huir</button>
+        <div class="battle-overlay-panel start-panel active">
+          <div class="battle-window">
+            <div class="battle-header">COMBATE</div>
+            <div class="battle-menu">
+              <button id="fightButton">ATK</button>
+              <button id="inventoryButton">INVE</button>
+              <button id="infoButton">INFO</button>
+              <button id="runButton">HUIR</button>
+            </div>
+          </div>
+        </div>
+
+        <div class="battle-overlay-panel atk-panel hidden">
+          <div class="battle-window purple-window">
+            <div class="battle-header">ATK</div>
+            <div class="battle-menu">
+              <button id="attackStrikeButton">GOLPE</button>
+              <button id="attackSlashButton">CORTE</button>
+              <button id="attackScareButton">ASUSTAR</button>
+              <button id="attackItemButton">POCION</button>
+            </div>
+            <button class="combat-back-button" id="backFromAtkButton">BACK</button>
+          </div>
+        </div>
+
+        <div class="battle-overlay-panel info-panel hidden">
+          <div class="battle-window info-window">
+            <div class="battle-header">INFO</div>
+            <div class="info-grid">
+              <div class="info-row"><span>A</span><span id="infoAtkValue">ATK</span></div>
+              <div class="info-row"><span>D</span><span id="infoDefValue">DEF</span></div>
+              <div class="info-row"><span>S</span><span id="infoSpdValue">SPD</span></div>
+              <div class="info-row wide"><span>HP</span><span id="infoHpValue">---</span></div>
+            </div>
+            <button class="combat-back-button" id="backFromInfoButton">BACK</button>
+          </div>
+        </div>
+
+        <div class="battle-overlay-panel inv-panel hidden">
+          <div class="battle-window inventory-window-combat">
+            <div class="battle-header">INVE</div>
+            <div id="combatInventoryGrid" class="combat-inventory-grid"></div>
+            <div class="inventory-actions">
+              <button class="combat-back-button" id="backFromInvButton">BACK</button>
+              <button id="combatInventoryNextButton">NEXT</button>
+            </div>
+          </div>
         </div>
       </div>
       <aside class="ui">

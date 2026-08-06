@@ -286,12 +286,45 @@ function updateUI() {
   stoneCountLabel.textContent = player.stone;
   potionsCountLabel.textContent = player.potions;
   statusText.textContent = state === 'combat' ? 'Combate activo' : state === 'dead' ? 'Has muerto. Presiona R para reiniciar.' : 'Explorando';
-  combatMenuOverlay.classList.toggle('hidden', state === 'menu');
+  combatMenuOverlay.classList.toggle('hidden', state !== 'combat');
   document.body.classList.toggle('combat-active', state === 'combat');
   fightButton.disabled = state !== 'combat';
-  inventoryButton.disabled = false;
+  inventoryButton.disabled = state !== 'combat';
   infoButton.disabled = state !== 'combat';
   runButton.disabled = state !== 'combat';
+}
+
+function showCombatPanel(panel) {
+  const panels = ['start-panel', 'atk-panel', 'info-panel', 'inv-panel'];
+  panels.forEach((panelName) => {
+    const element = document.querySelector(`.${panelName}`);
+    if (!element) return;
+    element.classList.toggle('hidden', panelName !== panel);
+    element.classList.toggle('active', panelName === panel);
+  });
+}
+
+function updateCombatInfo() {
+  if (!enemy) return;
+  document.getElementById('infoAtkValue').textContent = `ATK ${enemy.attack}`;
+  document.getElementById('infoDefValue').textContent = `DEF ${enemy.defense}`;
+  document.getElementById('infoSpdValue').textContent = `SPD ${enemy.speed}`;
+  document.getElementById('infoHpValue').textContent = `${enemy.health}/${enemy.maxHealth}`;
+}
+
+function openCombatInventory() {
+  const combatInventoryGrid = document.getElementById('combatInventoryGrid');
+  combatInventoryGrid.innerHTML = '';
+  const items = [
+    { label: `Madera`, count: player.wood },
+    { label: `Piedra`, count: player.stone },
+    { label: `Poción`, count: player.potions }
+  ];
+  items.forEach((item) => {
+    const cell = document.createElement('div');
+    cell.textContent = item.count > 0 ? `${item.label}: ${item.count}` : `${item.label}: 0`;
+    combatInventoryGrid.appendChild(cell);
+  });
 }
 
 function nextChapter() {
@@ -356,28 +389,25 @@ function startCombat() {
   };
   recomputeCharacterStats(enemy);
   setMessage('¡Un enemigo te atacó! Apareció un ' + enemy.name + ` (Lv ${enemy.level}).`);
+  showCombatPanel('start-panel');
   updateUI();
 }
 
-function combatAction(action) {
+function combatAction(action, attackType) {
   if (state !== 'combat') return;
 
   if (action === 'fight') {
-    const damage = Math.max(1, player.attack - enemy.defense + getRandomInt(-2, 2));
+    let damage = Math.max(1, player.attack - enemy.defense + getRandomInt(-2, 2));
+    if (attackType === 'slash') damage += 2;
+    if (attackType === 'scare') damage = Math.max(1, Math.floor(damage * 0.8));
     enemy.health -= damage;
-    setMessage(`Usas ataque y haces ${damage} de daño al ${enemy.name}.`);
+    setMessage(`Usas ${attackType === 'slash' ? 'Corte' : attackType === 'scare' ? 'Asustar' : 'Golpe'} y haces ${damage} de daño al ${enemy.name}.`);
+    showCombatPanel('start-panel');
   }
 
   if (action === 'inventory') {
-    if (state === 'combat') {
-      const pIvs = player.iv ? `IVs — HP: ${player.iv.hp}  ATK: ${player.iv.atk}  DEF: ${player.iv.def}  SPD: ${player.iv.spd}` : 'IVs — N/A';
-      const pStats = `Jugador (Lv ${player.level}) — HP ${player.health}/${player.maxHealth}  ATK ${player.attack}  DEF ${player.defense}  SPD ${player.speed}`;
-      const status = player.statusEffects && player.statusEffects.length ? `Estado: ${player.statusEffects.join(', ')}` : 'Estado: Ninguno';
-      const quality = `Calidad: ${player.quality || 'Normal'}`;
-      setMessage(pIvs + '\n' + pStats + '\n' + status + '  ' + quality);
-      return;
-    }
-    setMessage(`Inventario: ${player.wood} madera, ${player.stone} piedra, ${player.potions} pociones.`);
+    openCombatInventory();
+    showCombatPanel('inv-panel');
     return;
   }
   if (action === 'info') {
@@ -385,11 +415,8 @@ function combatAction(action) {
       setMessage('No hay enemigo activo.');
       return;
     }
-    const ivs = enemy.iv
-      ? `IVs — HP: ${enemy.iv.hp}  ATK: ${enemy.iv.atk}  DEF: ${enemy.iv.def}  SPD: ${enemy.iv.spd}`
-      : 'IVs — N/A';
-    const stats = `${enemy.name} (Lv ${enemy.level}) — HP ${enemy.health}/${enemy.maxHealth}  ATK ${enemy.attack}  DEF ${enemy.defense}  SPD ${enemy.speed}`;
-    setMessage(ivs + '\n' + stats);
+    updateCombatInfo();
+    showCombatPanel('info-panel');
     return;
   }
 
@@ -575,11 +602,15 @@ document.addEventListener('keydown', (event) => {
 startButton.addEventListener('click', startGame);
 
 fightButton.addEventListener('click', () => {
-  combatAction('fight');
-  if (state !== 'dead') draw();
+  showCombatPanel('atk-panel');
 });
 
 inventoryButton.addEventListener('click', () => {
+  if (state === 'combat') {
+    openCombatInventory();
+    showCombatPanel('inv-panel');
+    return;
+  }
   openInventoryPanel();
 });
 openInventoryButton.addEventListener('click', () => {
@@ -588,6 +619,37 @@ openInventoryButton.addEventListener('click', () => {
 closeInventoryButton.addEventListener('click', () => {
   closeInventoryPanel();
 });
+
+const attackStrikeButton = document.getElementById('attackStrikeButton');
+const attackSlashButton = document.getElementById('attackSlashButton');
+const attackScareButton = document.getElementById('attackScareButton');
+const attackItemButton = document.getElementById('attackItemButton');
+const backFromAtkButton = document.getElementById('backFromAtkButton');
+const backFromInfoButton = document.getElementById('backFromInfoButton');
+const backFromInvButton = document.getElementById('backFromInvButton');
+const combatInventoryNextButton = document.getElementById('combatInventoryNextButton');
+
+attackStrikeButton.addEventListener('click', () => {
+  combatAction('fight', 'strike');
+  draw();
+});
+attackSlashButton.addEventListener('click', () => {
+  combatAction('fight', 'slash');
+  draw();
+});
+attackScareButton.addEventListener('click', () => {
+  combatAction('fight', 'scare');
+  draw();
+});
+attackItemButton.addEventListener('click', () => {
+  combatAction('inventory');
+  draw();
+});
+
+backFromAtkButton.addEventListener('click', () => showCombatPanel('start-panel'));
+backFromInfoButton.addEventListener('click', () => showCombatPanel('start-panel'));
+backFromInvButton.addEventListener('click', () => showCombatPanel('start-panel'));
+combatInventoryNextButton.addEventListener('click', () => showCombatPanel('start-panel'));
 
 const inventorySlots = Array(32).fill(null);
 let selectedInventorySlot = null;
@@ -667,4 +729,3 @@ runButton.addEventListener('click', () => {
 
 applyChapter();
 updateUI();
-Set: enemy.iv.atk = (enemy.iv.atk || getRandomInt(1, 31)); enemy.iv.def = (enemy.iv.def || getRandomInt(1, 31)); enemy.iv.spd = (enemy.iv.spd || getRandomInt(1, 31)); recomputeCharacterStats(enemy);
