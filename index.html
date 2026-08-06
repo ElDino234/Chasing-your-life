@@ -7,7 +7,7 @@
   <link rel="stylesheet" href="style.css">
 </head>
 <body>
-  <div class="overlay" id="startScreen">
+  <div id="startScreen">
     <div class="start-card">
       <h1>Chasing Your Life</h1>
       <p class="intro-text">Prólogo – El fin del mundo
@@ -24,7 +24,17 @@ El mundo terminó en un instante. Un héroe y cinco compañeros lucharon en la �
       <p id="objectiveText" class="objective-text">Objetivo: Sobrevive y descubre qué pasó.</p>
     </header>
     <main>
-      <canvas id="gameCanvas" width="512" height="512"></canvas>
+      <div class="canvas-container">
+        <canvas id="gameCanvas" width="920" height="520"></canvas>
+        <div id="combatMenuOverlay" class="combat-menu-overlay hidden">
+          <div class="battle-options">
+            <button id="fightButton">Luchar</button>
+            <button id="inventoryButton">Inventario</button>
+            <button id="infoButton">Info</button>
+            <button id="runButton">Huir</button>
+          </div>
+        </div>
+      </div>
       <aside class="ui">
         <section>
           <h2>Controles</h2>
@@ -36,15 +46,12 @@ El mundo terminó en un instante. Un héroe y cinco compañeros lucharon en la �
           <h2>Estado</h2>
           <p id="statusText">Explorando...</p>
           <p>Vida: <span id="playerHealth">100</span></p>
+        </section>
+        <section>
+          <h2>Inventario</h2>
           <p>Madera: <span id="woodCount">0</span></p>
           <p>Piedra: <span id="stoneCount">0</span></p>
           <p>Curaciones: <span id="potionsCount">2</span></p>
-          <p>Enemigo: <span id="enemyInfo">-</span></p>
-        </section>
-        <section id="combatControls" class="hidden">
-          <h2>Combate</h2>
-          <button id="attackButton">Atacar</button>
-          <button id="healButton">Usar curación</button>
         </section>
         <section>
           <h2>Mensaje</h2>

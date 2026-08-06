@@ -6,10 +6,11 @@ const playerHealthLabel = document.getElementById('playerHealth');
 const woodCountLabel = document.getElementById('woodCount');
 const stoneCountLabel = document.getElementById('stoneCount');
 const potionsCountLabel = document.getElementById('potionsCount');
-const enemyInfoLabel = document.getElementById('enemyInfo');
-const combatControls = document.getElementById('combatControls');
-const attackButton = document.getElementById('attackButton');
-const healButton = document.getElementById('healButton');
+const combatMenuOverlay = document.getElementById('combatMenuOverlay');
+const fightButton = document.getElementById('fightButton');
+const inventoryButton = document.getElementById('inventoryButton');
+const infoButton = document.getElementById('infoButton');
+const runButton = document.getElementById('runButton');
 const startScreen = document.getElementById('startScreen');
 const startButton = document.getElementById('startButton');
 const chapterTitleLabel = document.getElementById('chapterTitle');
@@ -40,12 +41,15 @@ function applyChapter() {
 
 function startGame() {
   startScreen.classList.add('hidden');
+  startScreen.style.display = 'none';
   gameMode = 'play';
   state = 'explore';
   currentChapter = 0;
+  buildMap();
   applyChapter();
   updateUI();
-  draw();
+  lastTimestamp = performance.now();
+  requestAnimationFrame(gameLoop);
 }
 
 const tileSize = 32;
@@ -84,17 +88,26 @@ let map = [];
 let player = {
   x: 1,
   y: 14,
-  health: 100,
-  maxHealth: 100,
+  level: 1,
+  exp: 0,
+  expToNext: 50,
+  health: 5,
+  maxHealth: 5,
   wood: 0,
   stone: 0,
   potions: 2,
-  attack: 10,
-  defense: 2
+  attack: 6,
+  defense: 1
 };
 let state = 'explore';
 let enemy = null;
 let message = 'Bienvenido a Chasing Your Life. Usa WASD para moverte y E para interactuar.';
+let isMoving = false;
+let moveStart = { x: 1, y: 14 };
+let moveTarget = { x: 1, y: 14 };
+let moveProgress = 1;
+const moveDuration = 140; // ms
+let lastTimestamp = 0;
 
 function buildMap() {
   map = mapLayout.map((row, y) => {
@@ -110,7 +123,7 @@ function getTile(x, y) {
   return map[y][x];
 }
 
-function draw() {
+function drawExplore() {
   ctx.clearRect(0, 0, canvas.width, canvas.height);
   for (let y = 0; y < rows; y++) {
     for (let x = 0; x < cols; x++) {
@@ -130,10 +143,91 @@ function draw() {
   }
 
   ctx.fillStyle = '#fee440';
+  const drawX = isMoving ? lerp(moveStart.x, moveTarget.x, moveProgress) : player.x;
+  const drawY = isMoving ? lerp(moveStart.y, moveTarget.y, moveProgress) : player.y;
   ctx.beginPath();
-  ctx.arc(player.x * tileSize + tileSize / 2, player.y * tileSize + tileSize / 2, tileSize / 2 - 4, 0, Math.PI * 2);
+  ctx.arc(drawX * tileSize + tileSize / 2, drawY * tileSize + tileSize / 2, tileSize / 2 - 4, 0, Math.PI * 2);
   ctx.fill();
   ctx.closePath();
+}
+
+function drawCombat() {
+  ctx.clearRect(0, 0, canvas.width, canvas.height);
+
+  // Simple flat background for battle
+  ctx.fillStyle = '#2b3350';
+  ctx.fillRect(0, 0, canvas.width, canvas.height);
+
+  // Enemy area (left)
+  ctx.fillStyle = '#243042';
+  ctx.fillRect(20, 20, canvas.width - 40, canvas.height * 0.55 - 30);
+  ctx.fillStyle = '#f4f7ef';
+  ctx.font = '20px monospace';
+  ctx.fillText(`${enemy.name || 'Enemigo'} (Lv ${enemy.level || 1})`, 36, 48);
+  drawHealthBar(36, 64, 300, enemy.health, enemy.maxHealth || 30, '#e05555');
+
+  // Enemy sprite (red circle) - left side
+  ctx.fillStyle = '#d33a3a';
+  ctx.beginPath();
+  ctx.arc(140, canvas.height * 0.28, 36, 0, Math.PI * 2);
+  ctx.fill();
+  ctx.closePath();
+
+  // Player area (right)
+  ctx.fillStyle = '#1f3a2c';
+  const playerBoxY = canvas.height * 0.55;
+  ctx.fillRect(20, playerBoxY, canvas.width - 40, canvas.height - playerBoxY - 20);
+  ctx.fillStyle = '#f4f7ef';
+  ctx.fillText('Tú', canvas.width - 340, playerBoxY + 28);
+  drawHealthBar(canvas.width - 340, playerBoxY + 44, 300, player.health, player.maxHealth, '#80d58a');
+
+  // Player sprite (yellow circle) - right side
+  ctx.fillStyle = '#f6df6b';
+  ctx.beginPath();
+  ctx.arc(canvas.width - 120, playerBoxY + 86, 36, 0, Math.PI * 2);
+  ctx.fill();
+  ctx.closePath();
+
+  // Bottom pixel-style command bar is handled by overlay buttons; but draw an underlay strip for visual
+  ctx.fillStyle = '#2b1b3f';
+  ctx.fillRect(16, canvas.height - 108, canvas.width - 32, 92);
+}
+const inventoryIcon = new Image();
+inventoryIcon.src = '';
+function drawHealthBar(x, y, width, current, max, color) {
+  const ratio = Math.max(0, Math.min(1, current / max));
+  ctx.fillStyle = '#2c2c2c';
+  ctx.fillRect(x, y, width, 16);
+  ctx.fillStyle = color;
+  ctx.fillRect(x, y, width * ratio, 16);
+  ctx.strokeStyle = '#000';
+  ctx.lineWidth = 2;
+  ctx.strokeRect(x, y, width, 16);
+}
+
+function wrapText(text, x, y, maxWidth, lineHeight) {
+  const words = text.split(' ');
+  let line = '';
+  for (const word of words) {
+    const testLine = line + word + ' ';
+    const metrics = ctx.measureText(testLine);
+    if (metrics.width > maxWidth && line.length > 0) {
+      ctx.fillText(line, x, y);
+      line = word + ' ';
+      y += lineHeight;
+    } else {
+      line = testLine;
+    }
+  }
+  ctx.fillText(line, x, y);
+}
+
+function draw() {
+  if (state === 'combat') {
+    drawCombat();
+  } else {
+    drawExplore();
+  }
 }
 
 function setMessage(text) {
@@ -146,11 +240,13 @@ function updateUI() {
   woodCountLabel.textContent = player.wood;
   stoneCountLabel.textContent = player.stone;
   potionsCountLabel.textContent = player.potions;
-  enemyInfoLabel.textContent = state === 'combat' ? `${enemy.name} - Vida ${enemy.health}` : '-';
   statusText.textContent = state === 'combat' ? 'Combate activo' : state === 'dead' ? 'Has muerto. Presiona R para reiniciar.' : 'Explorando';
-  combatControls.classList.toggle('hidden', state !== 'combat');
-  attackButton.disabled = state !== 'combat';
-  healButton.disabled = state !== 'combat' || player.potions <= 0;
+  combatMenuOverlay.classList.toggle('hidden', state !== 'combat');
+  document.body.classList.toggle('combat-active', state === 'combat');
+  fightButton.disabled = state !== 'combat';
+  inventoryButton.disabled = state !== 'combat';
+  infoButton.disabled = state !== 'combat';
+  runButton.disabled = state !== 'combat';
 }
 
 function nextChapter() {
@@ -162,7 +258,7 @@ function nextChapter() {
 }
 
 function movePlayer(dx, dy) {
-  if (state !== 'explore') return;
+  if (state !== 'explore' || isMoving) return;
   const newX = player.x + dx;
   const newY = player.y + dy;
   const target = getTile(newX, newY);
@@ -171,11 +267,15 @@ function movePlayer(dx, dy) {
     return;
   }
 
+  moveStart = { x: player.x, y: player.y };
+  moveTarget = { x: newX, y: newY };
+  moveProgress = 0;
+  isMoving = true;
   player.x = newX;
   player.y = newY;
 
   if (target.char === 'E') {
-    startCombat();
+    setTimeout(() => startCombat(), moveDuration);
     return;
   }
 
@@ -196,34 +296,55 @@ function movePlayer(dx, dy) {
 
 function startCombat() {
   state = 'combat';
+  const levelVariance = getRandomInt(-1, 1);
+  const lvl = Math.max(1, player.level + levelVariance);
   enemy = {
     name: 'Goblin',
-    health: 30,
-    attack: 8,
-    defense: 1
+    level: lvl,
+    maxHealth: getRandomInt(1, 31),
+    attack: getRandomInt(1, 31),
+    defense: getRandomInt(1, 31),
+    speed: getRandomInt(1, 31)
   };
-  setMessage('¡Un enemigo te atacó! El combate empieza. Usa ataques y curaciones para ganar.');
+  enemy.health = enemy.maxHealth;
+  setMessage('¡Un enemigo te atacó! Apareció un ' + enemy.name + ` (Lv ${enemy.level}).`);
   updateUI();
 }
 
-function fightAction(action) {
+function combatAction(action) {
   if (state !== 'combat') return;
 
-  if (action === 'attack') {
+  if (action === 'fight') {
     const damage = Math.max(1, player.attack - enemy.defense + getRandomInt(-2, 2));
     enemy.health -= damage;
-    setMessage(`Atacas al ${enemy.name} y le haces ${damage} de daño.`);
+    setMessage(`Usas ataque y haces ${damage} de daño al ${enemy.name}.`);
   }
 
-  if (action === 'heal') {
-    if (player.potions <= 0) {
-      setMessage('No tienes curaciones disponibles.');
+  if (action === 'inventory') {
+    setMessage(`Inventario: ${player.wood} madera, ${player.stone} piedra, ${player.potions} pociones.`);
+    return;
+  }
+  if (action === 'info') {
+    if (!enemy) {
+      setMessage('No hay enemigo activo.');
       return;
     }
-    player.potions -= 1;
-    const healAmount = 20;
-    player.health = Math.min(player.maxHealth, player.health + healAmount);
-    setMessage(`Usas una curación y recuperas ${healAmount} puntos de vida.`);
+    setMessage(`${enemy.name} (Lv ${enemy.level}) — HP ${enemy.health}/${enemy.maxHealth}, Ataque ${enemy.attack}, Defensa ${enemy.defense}, Velocidad ${enemy.speed}.`);
+    return;
+  }
+
+  if (action === 'run') {
+    const fleeChance = getRandomInt(0, 100);
+    if (fleeChance > 50) {
+      setMessage('Logras huir del combate. Vuelve a explorar.');
+      state = 'explore';
+      enemy = null;
+      updateUI();
+      return;
+    }
+    setMessage('No puedes huir. El enemigo ataca.');
+    enemyAttack();
+    return;
   }
 
   if (enemy.health <= 0) {
@@ -251,9 +372,14 @@ function endCombat(victory) {
     map[player.y][player.x].char = '.';
     map[player.y][player.x].type = 'grass';
     map[player.y][player.x].color = tiles['.'].color;
+    // grant experience based on enemy level
+    const gainedExp = enemy && enemy.level ? enemy.level * 10 : 10;
     state = 'explore';
+    setMessage('Derrotaste al enemigo. Continúa explorando.');
+    if (enemy) {
+      gainExp(gainedExp);
+    }
     enemy = null;
-    setMessage('Derrotaste al enemigo. Continúa explorando.')
   }
   updateUI();
 }
@@ -281,9 +407,33 @@ function gatherResource() {
   updateUI();
 }
 
+function gainExp(amount) {
+  player.exp += amount;
+  setMessage(`Ganas ${amount} de experiencia.`);
+  checkLevelUp();
+}
+
+function checkLevelUp() {
+  let leveled = false;
+  while (player.exp >= player.expToNext) {
+    player.exp -= player.expToNext;
+    player.level += 1;
+    player.expToNext = Math.floor(player.expToNext * 1.5);
+    player.maxHealth += 5;
+    player.attack += 2;
+    player.defense += 1;
+    player.health = player.maxHealth;
+    leveled = true;
+  }
+  if (leveled) {
+    setMessage(`¡Subes al nivel ${player.level}! Vida máxima: ${player.maxHealth}.`);
+  }
+  updateUI();
+}
+
 function restartGame() {
   buildMap();
-  player = { x: 1, y: 14, health: 100, maxHealth: 100, wood: 0, stone: 0, potions: 2, attack: 10, defense: 2 };
+  player = { x: 1, y: 14, level: 1, exp: 0, expToNext: 50, health: 5, maxHealth: 5, wood: 0, stone: 0, potions: 2, attack: 6, defense: 1 };
   state = 'explore';
   enemy = null;
   setMessage('Juego reiniciado. Sigue explorando y recolectando recursos.');
@@ -291,6 +441,29 @@ function restartGame() {
   applyChapter();
   updateUI();
   draw();
+}
+
+function lerp(start, end, progress) {
+  return start + (end - start) * progress;
+}
+
+function updateMovement(delta) {
+  if (!isMoving) return;
+  moveProgress = Math.min(1, moveProgress + delta / moveDuration);
+  if (moveProgress >= 1) {
+    isMoving = false;
+    moveStart.x = moveTarget.x;
+    moveStart.y = moveTarget.y;
+    moveProgress = 1;
+  }
+}
+
+function gameLoop(timestamp) {
+  const delta = timestamp - lastTimestamp;
+  lastTimestamp = timestamp;
+  updateMovement(delta);
+  draw();
+  requestAnimationFrame(gameLoop);
 }
 
 function getRandomInt(min, max) {
@@ -316,16 +489,23 @@ document.addEventListener('keydown', (event) => {
 
 startButton.addEventListener('click', startGame);
 
-attackButton.addEventListener('click', () => {
-  fightAction('attack');
+fightButton.addEventListener('click', () => {
+  combatAction('fight');
   if (state !== 'dead') draw();
 });
 
-healButton.addEventListener('click', () => {
-  fightAction('heal');
+inventoryButton.addEventListener('click', () => {
+  combatAction('inventory');
+});
+
+infoButton.addEventListener('click', () => {
+  combatAction('info');
+});
+
+runButton.addEventListener('click', () => {
+  combatAction('run');
   if (state !== 'dead') draw();
 });
 
-buildMap();
+applyChapter();
 updateUI();
-draw();
