@@ -104,14 +104,38 @@ El mundo terminó en un instante. Un héroe y cinco compañeros lucharon en la �
     </main>
     <div id="inventoryPanel" class="inventory-panel hidden" style="display:none;">
       <div class="inventory-backdrop"></div>
-      <div class="inventory-window">
+      <div class="inventory-window inventory-screen">
         <div class="inventory-header">
           <h2>Inventario</h2>
           <button id="closeInventoryButton" class="small-button">Cerrar</button>
         </div>
-        <p class="inventory-help">Selecciona una casilla para elegir dónde poner los objetos.</p>
-        <p id="selectedSlotLabel">Slot seleccionado: ninguno</p>
-        <div id="inventoryGrid" class="inventory-grid"></div>
+        <div class="inventory-body">
+          <div class="inventory-sidebar">
+            <div class="inventory-tab">
+              <span>H</span>
+              <div class="inventory-tab-icon brown"></div>
+            </div>
+            <div class="inventory-tab">
+              <span>Y</span>
+              <div class="inventory-tab-icon grey"></div>
+            </div>
+            <div class="inventory-tab">
+              <span>N</span>
+              <div class="inventory-tab-icon yellow"></div>
+            </div>
+            <div class="inventory-tab">
+              <span>II</span>
+              <div class="inventory-tab-icon pink"></div>
+            </div>
+          </div>
+          <div class="inventory-grid-container">
+            <div id="inventoryGrid" class="inventory-grid"></div>
+          </div>
+        </div>
+        <div class="inventory-footer">
+          <button id="inventoryBackButton" class="inventory-action-button">BACK</button>
+          <button id="inventoryNextButton" class="inventory-action-button next">NEXT</button>
+        </div>
       </div>
     </div>
     <footer>
