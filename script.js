@@ -299,17 +299,30 @@ function showCombatPanel(panel) {
   panels.forEach((panelName) => {
     const element = document.querySelector(`.${panelName}`);
     if (!element) return;
-    element.classList.toggle('hidden', panelName !== panel);
-    element.classList.toggle('active', panelName === panel);
+    const isActive = panelName === panel;
+    element.classList.toggle('hidden', !isActive);
+    element.classList.toggle('active', isActive);
+    element.style.display = isActive ? 'block' : 'none';
   });
 }
 
 function updateCombatInfo() {
   if (!enemy) return;
-  document.getElementById('infoAtkValue').textContent = `ATK ${enemy.attack}`;
-  document.getElementById('infoDefValue').textContent = `DEF ${enemy.defense}`;
-  document.getElementById('infoSpdValue').textContent = `SPD ${enemy.speed}`;
+  document.getElementById('infoAtkValue').textContent = enemy.attack;
+  document.getElementById('infoDefValue').textContent = enemy.defense;
+  document.getElementById('infoSpdValue').textContent = enemy.speed;
   document.getElementById('infoHpValue').textContent = `${enemy.health}/${enemy.maxHealth}`;
+}
+
+function generateEnemyCombatStats(level) {
+  const maxVal = Math.min(31, Math.max(12, 6 + level * 3));
+  let atk, def, spd;
+  do {
+    atk = getRandomInt(1, maxVal);
+    def = getRandomInt(1, maxVal);
+    spd = getRandomInt(1, maxVal);
+  } while (atk + def + spd >= 45);
+  return { atk, def, spd };
 }
 
 function openCombatInventory() {
@@ -376,18 +389,22 @@ function startCombat() {
   state = 'combat';
   const levelVariance = getRandomInt(-1, 1);
   const lvl = Math.max(1, player.level + levelVariance);
+  const enemyCombat = generateEnemyCombatStats(lvl);
   // create enemy with base stats and random IVs (1-31)
   enemy = {
     name: 'Goblin',
     level: lvl,
-    baseHP: getRandomInt(6, 28),
-    baseAttack: getRandomInt(5, 24),
-    baseDefense: getRandomInt(3, 20),
-    baseSpeed: getRandomInt(5, 24),
+    baseHP: getRandomInt(14, 30),
+    baseAttack: enemyCombat.atk,
+    baseDefense: enemyCombat.def,
+    baseSpeed: enemyCombat.spd,
     iv: { hp: getRandomInt(1, 31), atk: getRandomInt(1, 31), def: getRandomInt(1, 31), spd: getRandomInt(1, 31) },
     ev: { hp: 0, atk: 0, def: 0, spd: 0 }
   };
   recomputeCharacterStats(enemy);
+  enemy.attack = enemyCombat.atk;
+  enemy.defense = enemyCombat.def;
+  enemy.speed = enemyCombat.spd;
   setMessage('¡Un enemigo te atacó! Apareció un ' + enemy.name + ` (Lv ${enemy.level}).`);
   showCombatPanel('start-panel');
   updateUI();
@@ -601,24 +618,11 @@ document.addEventListener('keydown', (event) => {
 
 startButton.addEventListener('click', startGame);
 
-fightButton.addEventListener('click', () => {
-  showCombatPanel('atk-panel');
-});
-
-inventoryButton.addEventListener('click', () => {
-  if (state === 'combat') {
-    openCombatInventory();
-    showCombatPanel('inv-panel');
-    return;
-  }
-  openInventoryPanel();
-});
-openInventoryButton.addEventListener('click', () => {
-  openInventoryPanel();
-});
-closeInventoryButton.addEventListener('click', () => {
-  closeInventoryPanel();
-});
+fightButton.addEventListener('click', handleCombatAttackButton);
+infoButton.addEventListener('click', handleCombatInfoButton);
+inventoryButton.addEventListener('click', handleCombatInventoryButton);
+openInventoryButton.addEventListener('click', openInventoryPanel);
+closeInventoryButton.addEventListener('click', closeInventoryPanel);
 
 const attackStrikeButton = document.getElementById('attackStrikeButton');
 const attackSlashButton = document.getElementById('attackSlashButton');
@@ -630,20 +634,16 @@ const backFromInvButton = document.getElementById('backFromInvButton');
 const combatInventoryNextButton = document.getElementById('combatInventoryNextButton');
 
 attackStrikeButton.addEventListener('click', () => {
-  combatAction('fight', 'strike');
-  draw();
+  handleAttackAction('strike');
 });
 attackSlashButton.addEventListener('click', () => {
-  combatAction('fight', 'slash');
-  draw();
+  handleAttackAction('slash');
 });
 attackScareButton.addEventListener('click', () => {
-  combatAction('fight', 'scare');
-  draw();
+  handleAttackAction('scare');
 });
 attackItemButton.addEventListener('click', () => {
-  combatAction('inventory');
-  draw();
+  handleAttackAction('item');
 });
 
 backFromAtkButton.addEventListener('click', () => showCombatPanel('start-panel'));
@@ -653,6 +653,39 @@ combatInventoryNextButton.addEventListener('click', () => showCombatPanel('start
 
 const inventorySlots = Array(32).fill(null);
 let selectedInventorySlot = null;
+
+function handleCombatAttackButton() {
+  showCombatPanel('atk-panel');
+}
+
+function handleCombatInfoButton() {
+  if (state !== 'combat' || !enemy) {
+    setMessage('No hay enemigo activo.');
+    return;
+  }
+  updateCombatInfo();
+  showCombatPanel('info-panel');
+}
+
+function handleCombatInventoryButton() {
+  if (state !== 'combat') {
+    openInventoryPanel();
+    return;
+  }
+  openCombatInventory();
+  showCombatPanel('inv-panel');
+}
+
+function handleAttackAction(type) {
+  if (type === 'item') {
+    combatAction('inventory');
+  } else {
+    combatAction('fight', type);
+  }
+  if (state !== 'dead') {
+    draw();
+  }
+}
 
 function openInventoryPanel() {
   selectedInventorySlot = null;
@@ -694,32 +727,6 @@ function selectInventorySlot(index) {
   selectedInventorySlot = index;
   selectedSlotLabel.textContent = `Slot seleccionado: ${index + 1}`;
   renderInventoryGrid();
-}
-
-infoButton.addEventListener('click', () => {
-  showEnemyInfo();
-});
-
-function showEnemyInfo() {
-  try {
-    console.log('showEnemyInfo called, state=', state, 'enemy=', enemy);
-    if (state !== 'combat') {
-      setMessage('No hay enemigo activo.');
-      return;
-    }
-    if (!enemy) {
-      setMessage('No hay enemigo activo.');
-      return;
-    }
-    const ivs = enemy.iv
-      ? `IVs — HP: ${enemy.iv.hp}  ATK: ${enemy.iv.atk}  DEF: ${enemy.iv.def}  SPD: ${enemy.iv.spd}`
-      : 'IVs — N/A';
-    const stats = `${enemy.name} (Lv ${enemy.level}) — HP ${enemy.health}/${enemy.maxHealth}  ATK ${enemy.attack}  DEF ${enemy.defense}  SPD ${enemy.speed}`;
-    setMessage(ivs + '\n' + stats);
-  } catch (err) {
-    console.error('Error mostrando info enemigo:', err);
-    setMessage('Error al mostrar información del enemigo. Abre la consola para más detalles.');
-  }
 }
 
 runButton.addEventListener('click', () => {
