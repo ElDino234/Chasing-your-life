@@ -56,11 +56,9 @@ canvas {
 }
 
 .combat-menu-overlay {
-  position: absolute;
-  left: 50%;
-  transform: translateX(-50%);
-  bottom: 16px;
-  max-width: calc(100% - 32px);
+  position: relative;
+  margin: 12px auto 0;
+  max-width: calc(920px - 32px);
   background: linear-gradient(180deg,#6b3a86,#4f2a6a);
   border: 4px solid #2b1630;
   padding: 10px;
@@ -99,7 +97,7 @@ body.combat-active .canvas-container {
 
 body.combat-active canvas {
   width: 760px;
-  height: 760px;
+  height: 520px;
 }
 
 .ui {

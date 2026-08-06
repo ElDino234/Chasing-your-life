@@ -47,6 +47,7 @@ function startGame() {
   currentChapter = 0;
   buildMap();
   applyChapter();
+  recomputeCharacterStats(player);
   updateUI();
   lastTimestamp = performance.now();
   requestAnimationFrame(gameLoop);
@@ -91,13 +92,26 @@ let player = {
   level: 1,
   exp: 0,
   expToNext: 50,
-  health: 5,
-  maxHealth: 5,
+  // base stats (analogous to Pokémon Base)
+  baseHP: 20,
+  baseAttack: 12,
+  baseDefense: 8,
+  baseSpeed: 10,
+  // IVs (player fixed at 16 per request)
+  iv: { hp: 16, atk: 16, def: 16, spd: 16 },
+  // EVs (start at 0)
+  ev: { hp: 0, atk: 0, def: 0, spd: 0 },
+  // derived/current stats (will be calculated)
+  health: 0,
+  maxHealth: 0,
+  attack: 0,
+  defense: 0,
+  speed: 0,
+  statusEffects: [],
+  quality: 'Normal',
   wood: 0,
   stone: 0,
-  potions: 2,
-  attack: 6,
-  defense: 1
+  potions: 2
 };
 let state = 'explore';
 let enemy = null;
@@ -116,6 +130,32 @@ function buildMap() {
       return { ...base, char, x, y };
     });
   });
+}
+
+// Stat calculation helpers (Pokémon-style)
+function calcHP(base, iv, ev, level) {
+  const evTerm = Math.floor(ev / 4);
+  const value = Math.floor(((2 * base + iv + evTerm) * level) / 100) + level + 10;
+  return value;
+}
+
+function calcStat(base, iv, ev, level) {
+  const evTerm = Math.floor(ev / 4);
+  const value = Math.floor(((2 * base + iv + evTerm) * level) / 100) + 5;
+  return value;
+}
+
+function recomputeCharacterStats(char) {
+  // char must have baseHP/baseAttack/baseDefense/baseSpeed, iv and ev objects and level
+  char.maxHealth = calcHP(char.baseHP, char.iv.hp, char.ev.hp, char.level);
+  char.attack = calcStat(char.baseAttack, char.iv.atk, char.ev.atk, char.level);
+  char.defense = calcStat(char.baseDefense, char.iv.def, char.ev.def, char.level);
+  char.speed = calcStat(char.baseSpeed, char.iv.spd, char.ev.spd, char.level);
+  if (!char.health || char.health <= 0) {
+    char.health = char.maxHealth;
+  } else {
+    char.health = Math.min(char.health, char.maxHealth);
+  }
 }
 
 function getTile(x, y) {
@@ -298,15 +338,18 @@ function startCombat() {
   state = 'combat';
   const levelVariance = getRandomInt(-1, 1);
   const lvl = Math.max(1, player.level + levelVariance);
+  // create enemy with base stats and random IVs (1-31)
   enemy = {
     name: 'Goblin',
     level: lvl,
-    maxHealth: getRandomInt(1, 31),
-    attack: getRandomInt(1, 31),
-    defense: getRandomInt(1, 31),
-    speed: getRandomInt(1, 31)
+    baseHP: getRandomInt(6, 28),
+    baseAttack: getRandomInt(5, 24),
+    baseDefense: getRandomInt(3, 20),
+    baseSpeed: getRandomInt(5, 24),
+    iv: { hp: getRandomInt(1, 31), atk: getRandomInt(1, 31), def: getRandomInt(1, 31), spd: getRandomInt(1, 31) },
+    ev: { hp: 0, atk: 0, def: 0, spd: 0 }
   };
-  enemy.health = enemy.maxHealth;
+  recomputeCharacterStats(enemy);
   setMessage('¡Un enemigo te atacó! Apareció un ' + enemy.name + ` (Lv ${enemy.level}).`);
   updateUI();
 }
@@ -321,6 +364,14 @@ function combatAction(action) {
   }
 
   if (action === 'inventory') {
+    if (state === 'combat') {
+      const pIvs = player.iv ? `IVs — HP: ${player.iv.hp}  ATK: ${player.iv.atk}  DEF: ${player.iv.def}  SPD: ${player.iv.spd}` : 'IVs — N/A';
+      const pStats = `Jugador (Lv ${player.level}) — HP ${player.health}/${player.maxHealth}  ATK ${player.attack}  DEF ${player.defense}  SPD ${player.speed}`;
+      const status = player.statusEffects && player.statusEffects.length ? `Estado: ${player.statusEffects.join(', ')}` : 'Estado: Ninguno';
+      const quality = `Calidad: ${player.quality || 'Normal'}`;
+      setMessage(pIvs + '\n' + pStats + '\n' + status + '  ' + quality);
+      return;
+    }
     setMessage(`Inventario: ${player.wood} madera, ${player.stone} piedra, ${player.potions} pociones.`);
     return;
   }
@@ -329,7 +380,11 @@ function combatAction(action) {
       setMessage('No hay enemigo activo.');
       return;
     }
-    setMessage(`${enemy.name} (Lv ${enemy.level}) — HP ${enemy.health}/${enemy.maxHealth}, Ataque ${enemy.attack}, Defensa ${enemy.defense}, Velocidad ${enemy.speed}.`);
+    const ivs = enemy.iv
+      ? `IVs — HP: ${enemy.iv.hp}  ATK: ${enemy.iv.atk}  DEF: ${enemy.iv.def}  SPD: ${enemy.iv.spd}`
+      : 'IVs — N/A';
+    const stats = `${enemy.name} (Lv ${enemy.level}) — HP ${enemy.health}/${enemy.maxHealth}  ATK ${enemy.attack}  DEF ${enemy.defense}  SPD ${enemy.speed}`;
+    setMessage(ivs + '\n' + stats);
     return;
   }
 
@@ -419,9 +474,9 @@ function checkLevelUp() {
     player.exp -= player.expToNext;
     player.level += 1;
     player.expToNext = Math.floor(player.expToNext * 1.5);
-    player.maxHealth += 5;
-    player.attack += 2;
-    player.defense += 1;
+    // recompute stats using formulas
+    recomputeCharacterStats(player);
+    // on level up restore to full
     player.health = player.maxHealth;
     leveled = true;
   }
@@ -433,12 +488,33 @@ function checkLevelUp() {
 
 function restartGame() {
   buildMap();
-  player = { x: 1, y: 14, level: 1, exp: 0, expToNext: 50, health: 5, maxHealth: 5, wood: 0, stone: 0, potions: 2, attack: 6, defense: 1 };
+  player = {
+    x: 1,
+    y: 14,
+    level: 1,
+    exp: 0,
+    expToNext: 50,
+    baseHP: 20,
+    baseAttack: 12,
+    baseDefense: 8,
+    baseSpeed: 10,
+    iv: { hp: 16, atk: 16, def: 16, spd: 16 },
+    ev: { hp: 0, atk: 0, def: 0, spd: 0 },
+    health: 0,
+    maxHealth: 0,
+    attack: 0,
+    defense: 0,
+    speed: 0,
+    wood: 0,
+    stone: 0,
+    potions: 2
+  };
   state = 'explore';
   enemy = null;
   setMessage('Juego reiniciado. Sigue explorando y recolectando recursos.');
   currentChapter = 0;
   applyChapter();
+  recomputeCharacterStats(player);
   updateUI();
   draw();
 }
