@@ -619,3 +619,4 @@ runButton.addEventListener('click', () => {
 
 applyChapter();
 updateUI();
+Set: enemy.iv.atk = (enemy.iv.atk || getRandomInt(1, 31)); enemy.iv.def = (enemy.iv.def || getRandomInt(1, 31)); enemy.iv.spd = (enemy.iv.spd || getRandomInt(1, 31)); recomputeCharacterStats(enemy);
