@@ -571,12 +571,46 @@ fightButton.addEventListener('click', () => {
 });
 
 inventoryButton.addEventListener('click', () => {
-  combatAction('inventory');
+  showInventory();
 });
 
+function showInventory() {
+  if (state === 'combat') {
+    const pIvs = player.iv ? `IVs — HP: ${player.iv.hp}  ATK: ${player.iv.atk}  DEF: ${player.iv.def}  SPD: ${player.iv.spd}` : 'IVs — N/A';
+    const pStats = `Jugador (Lv ${player.level}) — HP ${player.health}/${player.maxHealth}  ATK ${player.attack}  DEF ${player.defense}  SPD ${player.speed}`;
+    const status = player.statusEffects && player.statusEffects.length ? `Estado: ${player.statusEffects.join(', ')}` : 'Estado: Ninguno';
+    const quality = `Calidad: ${player.quality || 'Normal'}`;
+    setMessage(pIvs + '\n' + pStats + '\n' + status + '  ' + quality);
+    return;
+  }
+  setMessage(`Inventario: ${player.wood} madera, ${player.stone} piedra, ${player.potions} pociones.`);
+}
+
 infoButton.addEventListener('click', () => {
-  combatAction('info');
+  showEnemyInfo();
 });
+
+function showEnemyInfo() {
+  try {
+    console.log('showEnemyInfo called, state=', state, 'enemy=', enemy);
+    if (state !== 'combat') {
+      setMessage('No hay enemigo activo.');
+      return;
+    }
+    if (!enemy) {
+      setMessage('No hay enemigo activo.');
+      return;
+    }
+    const ivs = enemy.iv
+      ? `IVs — HP: ${enemy.iv.hp}  ATK: ${enemy.iv.atk}  DEF: ${enemy.iv.def}  SPD: ${enemy.iv.spd}`
+      : 'IVs — N/A';
+    const stats = `${enemy.name} (Lv ${enemy.level}) — HP ${enemy.health}/${enemy.maxHealth}  ATK ${enemy.attack}  DEF ${enemy.defense}  SPD ${enemy.speed}`;
+    setMessage(ivs + '\n' + stats);
+  } catch (err) {
+    console.error('Error mostrando info enemigo:', err);
+    setMessage('Error al mostrar información del enemigo. Abre la consola para más detalles.');
+  }
+}
 
 runButton.addEventListener('click', () => {
   combatAction('run');
