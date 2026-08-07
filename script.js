@@ -120,7 +120,7 @@ let player = {
 };
 let state = 'explore';
 let enemy = null;
-let message = 'Bienvenido a Chasing Your Life. Usa WASD para moverte y E para interactuar.';
+let message = 'Usa WASD para moverte. Usa E para recoger objetos. Usa la barra espaciadora (SPACE) para abrir el inventario. En combate, selecciona ATK para ver tus habilidades: Golpe tiene prioridad y hace menos daño, Corte hace más daño pero es más lento, Asustar puede impedir que el enemigo ataque durante 5 turnos, y Poción cura 20 puntos de vida o el 10% de tu salud, lo que sea más alto. Golpe tiene un daño base de 50 y Corte tiene 75.';
 let isMoving = false;
 let moveStart = { x: 1, y: 14 };
 let moveTarget = { x: 1, y: 14 };
@@ -414,11 +414,35 @@ function combatAction(action, attackType) {
   if (state !== 'combat') return;
 
   if (action === 'fight') {
-    let damage = Math.max(1, player.attack - enemy.defense + getRandomInt(-2, 2));
-    if (attackType === 'slash') damage += 2;
-    if (attackType === 'scare') damage = Math.max(1, Math.floor(damage * 0.8));
+    let damage = 0;
+    let actionLabel = 'Golpe';
+    if (attackType === 'strike') {
+      damage = Math.max(1, 50 + Math.floor(player.attack / 2) - enemy.defense + getRandomInt(-3, 3));
+      actionLabel = 'Golpe';
+    } else if (attackType === 'slash') {
+      damage = Math.max(1, 75 + Math.floor(player.attack / 2) - enemy.defense + getRandomInt(-5, 5));
+      actionLabel = 'Corte';
+    } else if (attackType === 'scare') {
+      damage = Math.max(1, 20 + Math.floor(player.attack / 3) - enemy.defense + getRandomInt(-2, 2));
+      actionLabel = 'Asustar';
+      enemy.statusEffects = enemy.statusEffects || [];
+      enemy.statusEffects.push({ type: 'scared', turns: 5 });
+    }
     enemy.health -= damage;
-    setMessage(`Usas ${attackType === 'slash' ? 'Corte' : attackType === 'scare' ? 'Asustar' : 'Golpe'} y haces ${damage} de daño al ${enemy.name}.`);
+    setMessage(`Usas ${actionLabel} y haces ${damage} de daño al ${enemy.name}.`);
+    showCombatPanel('start-panel');
+  }
+
+  if (action === 'item') {
+    if (player.potions <= 0) {
+      setMessage('No tienes pociones.');
+      return;
+    }
+    const healAmount = Math.max(20, Math.ceil(player.maxHealth * 0.10));
+    player.health = Math.min(player.maxHealth, player.health + healAmount);
+    player.potions -= 1;
+    setMessage(`Usas Poción y recuperas ${healAmount} puntos de vida.`);
+    updateUI();
     showCombatPanel('start-panel');
   }
 
@@ -438,16 +462,16 @@ function combatAction(action, attackType) {
   }
 
   if (action === 'run') {
-    const fleeChance = getRandomInt(0, 100);
-    if (fleeChance > 50) {
+    const fleeRoll = getRandomInt(1, 100);
+    if (fleeRoll <= 50) {
       setMessage('Logras huir del combate. Vuelve a explorar.');
       state = 'explore';
       enemy = null;
       updateUI();
       return;
     }
-    setMessage('No puedes huir. El enemigo ataca.');
-    enemyAttack();
+    setMessage('Fallaste al huir. El enemigo ataca gratis.');
+    enemyAttack({ freeAttack: true });
     return;
   }
 
@@ -458,7 +482,24 @@ function combatAction(action, attackType) {
   enemyAttack();
 }
 
-function enemyAttack() {
+function enemyAttack(options = {}) {
+  if (enemy && Array.isArray(enemy.statusEffects)) {
+    const scaredEffect = enemy.statusEffects.find((effect) => effect.type === 'scared');
+    if (scaredEffect) {
+      const skipChance = 50;
+      const roll = getRandomInt(1, 100);
+      scaredEffect.turns -= 1;
+      if (scaredEffect.turns <= 0) {
+        enemy.statusEffects = enemy.statusEffects.filter((effect) => effect !== scaredEffect);
+      }
+      if (roll <= skipChance) {
+        setMessage(`El ${enemy.name} está asustado y no ataca esta vez. Quedan ${Math.max(0, scaredEffect.turns)} turnos.`);
+        updateUI();
+        return;
+      }
+    }
+  }
+
   const damage = Math.max(1, enemy.attack - player.defense + getRandomInt(-2, 2));
   player.health -= damage;
   if (player.health <= 0) {
@@ -466,7 +507,8 @@ function enemyAttack() {
     state = 'dead';
     setMessage(`El ${enemy.name} te ha derrotado. Presiona R para reiniciar.`);
   } else {
-    setMessage(`El ${enemy.name} te golpea y te hace ${damage} de daño. Tu turno.`);
+    const attackMessage = options.freeAttack ? `El ${enemy.name} te ataca gratis y te hace ${damage} de daño. Tu turno.` : `El ${enemy.name} te golpea y te hace ${damage} de daño. Tu turno.`;
+    setMessage(attackMessage);
   }
   updateUI();
 }
@@ -606,7 +648,21 @@ document.addEventListener('keydown', (event) => {
     return;
   }
 
-  switch (event.key.toLowerCase()) {
+  if (event.key === 'Backspace' && state === 'combat') {
+    event.preventDefault();
+    showCombatPanel('start-panel');
+    draw();
+    return;
+  }
+
+  const key = event.key.toLowerCase();
+  if (key === ' ') {
+    event.preventDefault();
+    openInventoryPanel();
+    draw();
+    return;
+  }
+  switch (key) {
     case 'w': movePlayer(0, -1); break;
     case 'a': movePlayer(-1, 0); break;
     case 's': movePlayer(0, 1); break;
@@ -692,8 +748,17 @@ function openInventoryPanel() {
   selectedSlotLabel.textContent = 'Slot seleccionado: ninguno';
   syncInventorySlots();
   renderInventoryGrid();
+  updateInventoryStats();
   inventoryPanel.classList.remove('hidden');
   inventoryPanel.style.display = 'grid';
+}
+
+function updateInventoryStats() {
+  document.getElementById('invLevelValue').textContent = player.level;
+  document.getElementById('invHpValue').textContent = `${player.health}/${player.maxHealth}`;
+  document.getElementById('invAtkValue').textContent = player.attack;
+  document.getElementById('invDefValue').textContent = player.defense;
+  document.getElementById('invSpdValue').textContent = player.speed;
 }
 
 function closeInventoryPanel() {

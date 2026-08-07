@@ -10,16 +10,14 @@
   <div id="startScreen">
     <div class="start-card">
       <h1>Chasing Your Life</h1>
-      <p class="intro-text">Prólogo – El fin del mundo
-
-El mundo terminó en un instante. Un héroe y cinco compañeros lucharon en la última batalla; él se sacrificó y todos creyeron que estaba muerto.</p>
+      <p class="intro-text">Usa WASD para moverte. Usa E para recoger objetos. Usa la barra espaciadora (SPACE) para abrir el inventario. En combate, selecciona ATK para ver tus habilidades: Golpe tiene prioridad y hace menos daño, Corte hace más daño pero es más lento, Asustar puede impedir que el enemigo ataque durante 5 turnos, y Poción cura 20 puntos de vida o el 10% de tu salud, lo que sea más alto. Golpe tiene un daño base de 50 y Corte tiene 75.</p>
       <button id="startButton">Iniciar juego</button>
     </div>
   </div>
   <div class="container">
     <header>
       <h1>Chasing Your Life</h1>
-      <p>RPG de supervivencia 2D con combate por turnos y recolección de materiales.</p>
+      <p>Explora, recoge recursos y enfrenta combates por turnos.</p>
       <p id="chapterTitle" class="chapter-title">Capítulo: Prólogo</p>
       <p id="objectiveText" class="objective-text">Objetivo: Sobrevive y descubre qué pasó.</p>
     </header>
@@ -98,7 +96,8 @@ El mundo terminó en un instante. Un héroe y cinco compañeros lucharon en la �
         <section>
           <h2>Controles</h2>
           <p>WASD para moverte</p>
-          <p>E para recoger / interactuar</p>
+          <p>E para recoger objetos</p>
+          <p>SPACE para abrir el inventario</p>
           <p>R para reiniciar si mueres</p>
         </section>
         <section>
@@ -146,6 +145,13 @@ El mundo terminó en un instante. Un héroe y cinco compañeros lucharon en la �
             </div>
           </div>
           <div class="inventory-grid-container">
+            <div id="inventoryPlayerStats" class="inventory-player-stats">
+              <div class="inventory-stat-row"><span>Nivel</span><span id="invLevelValue">1</span></div>
+              <div class="inventory-stat-row"><span>Vida</span><span id="invHpValue">100/100</span></div>
+              <div class="inventory-stat-row"><span>Ataque</span><span id="invAtkValue">15</span></div>
+              <div class="inventory-stat-row"><span>Defensa</span><span id="invDefValue">15</span></div>
+              <div class="inventory-stat-row"><span>Velocidad</span><span id="invSpdValue">15</span></div>
+            </div>
             <div id="inventoryGrid" class="inventory-grid"></div>
           </div>
           <div id="selectedSlotLabel" class="inventory-selected-slot">Slot seleccionado: ninguno</div>
